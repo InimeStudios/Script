@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kirmada Script Maker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <style>
+        :root {
+            --primary: #6a1b9a;
+            --dark: #2f3542;
+            --light: #f1f2f6;
+            --accent: #ff9800;
+        }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: var(--light);
+            color: var(--dark);
+            line-height: 1.6;
+        }
+        header {
+            background-color: var(--primary);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            font-family: 'Arial', sans-serif;
+            letter-spacing: 1px;
+        }
+        .logo span {
+            color: var(--accent);
+        }
+        .add-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s;
+        }
+        .add-btn:hover {
+            transform: scale(1.1);
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        }
+        .modal h2 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: bold;
+            color: var(--dark);
+        }
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(106,27,154,0.2);
+        }
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 0.5rem;
+            font-size: 1rem;
+            transition: background 0.2s;
+        }
+        .btn:hover {
+            background: #7b1fa2;
+        }
+        .btn-secondary {
+            background: #757575;
+        }
+        .btn-secondary:hover {
+            background: #616161;
+        }
+        .btn-accent {
+            background: var(--accent);
+        }
+        .btn-accent:hover {
+            background: #fb8c00;
+        }
+        .script-container {
+            padding: 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+            display: none;
+        }
+        .script-title {
+            font-size: 2rem;
+            margin-bottom: 1.5rem;
+            color: var(--primary);
+            font-weight: bold;
+            border-bottom: 2px solid var(--accent);
+            padding-bottom: 0.5rem;
+        }
+        .script-line {
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        .script-line select {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            min-width: 120px;
+        }
+        .script-line textarea {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-height: 60px;
+            resize: vertical;
+            font-size: 1rem;
+        }
+        .script-line textarea:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(106,27,154,0.2);
+        }
+        .toolbar {
+            display: flex;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+        }
+        .save-status {
+            color: #666;
+            font-style: italic;
+            margin-top: 1.5rem;
+            padding: 0.5rem;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+        .delete-btn {
+            background: #e53935;
+            color: white;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .delete-btn:hover {
+            background: #c62828;
+        }
+        .export-options {
+            display: none;
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+        .export-options.show {
+            display: block;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        .empty-state h2 {
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+        @media (max-width: 768px) {
+            .script-line {
+                flex-direction: column;
+                gap: 0.5rem;
+            }
+            .script-line select {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="logo">Kirmada <span>Script Maker</span></div>
+        <button class="add-btn" id="newScriptBtn">+</button>
+    </header>
+
+    <div class="modal" id="newScriptModal">
+        <div class="modal-content">
+            <h2>Create New Script</h2>
+            <div class="form-group">
+                <label for="scriptName">Script Name</label>
+                <input type="text" id="scriptName" placeholder="My Awesome Manga">
+            </div>
+            <div class="form-group">
+                <label for="scriptPassword">Access Password</label>
+                <input type="password" id="scriptPassword" placeholder="Create a password to share">
+            </div>
+            <button class="btn btn-accent" id="createScriptBtn">Create Script</button>
+            <button class="btn btn-secondary" id="cancelCreateBtn">Cancel</button>
+        </div>
+    </div>
+
+    <div class="modal" id="openScriptModal">
+        <div class="modal-content">
+            <h2>Open Existing Script</h2>
+            <div class="form-group">
+                <label for="openScriptId">Script ID</label>
+                <input type="text" id="openScriptId" placeholder="Enter script ID">
+            </div>
+            <div class="form-group">
+                <label for="openScriptPassword">Password</label>
+                <input type="password" id="openScriptPassword" placeholder="Enter password">
+            </div>
+            <button class="btn btn-accent" id="openScriptBtn">Open Script</button>
+            <button class="btn btn-secondary" id="cancelOpenBtn">Cancel</button>
+        </div>
+    </div>
+
+    <div id="emptyState" class="empty-state">
+        <h2>Welcome to Kirmada Script Maker</h2>
+        <p>Create your manga or anime script with our easy-to-use editor</p>
+        <button class="btn btn-accent" id="startNewScriptBtn">Start New Script</button>
+        <p style="margin-top: 1rem;">or</p>
+        <button class="btn" id="openExistingScriptBtn">Open Existing Script</button>
+    </div>
+
+    <div class="script-container" id="scriptContainer">
+        <h1 class="script-title" id="scriptTitleDisplay">Script Title</h1>
+        
+        <div class="toolbar">
+            <button class="btn" id="addLineBtn">Add Line</button>
+            <button class="btn" id="saveScriptBtn">Save</button>
+            <button class="btn btn-accent" id="exportScriptBtn">Export</button>
+            <button class="btn btn-secondary" id="shareScriptBtn">Share</button>
+        </div>
+        
+        <div class="export-options" id="exportOptions">
+            <h3>Export Options</h3>
+            <button class="btn" id="exportPdfBtn">Export as PDF</button>
+            <button class="btn" id="exportTextBtn">Export as Text</button>
+            <button class="btn btn-secondary" id="cancelExportBtn">Cancel</button>
+        </div>
+        
+        <div id="scriptLines">
+            <!-- Script lines will be added here -->
+        </div>
+        
+        <div class="save-status" id="saveStatus"></div>
+    </div>
+
+    <script>
+        // Initialize jsPDF
+        const { jsPDF } = window.jspdf;
+
+        // DOM Elements
+        const newScriptBtn = document.getElementById('newScriptBtn');
+        const newScriptModal = document.getElementById('newScriptModal');
+        const createScriptBtn = document.getElementById('createScriptBtn');
+        const cancelCreateBtn = document.getElementById('cancelCreateBtn');
+        const openScriptModal = document.getElementById('openScriptModal');
+        const openScriptBtn = document.getElementById('openScriptBtn');
+        const cancelOpenBtn = document.getElementById('cancelOpenBtn');
+        const scriptContainer = document.getElementById('scriptContainer');
+        const emptyState = document.getElementById('emptyState');
+        const scriptTitleDisplay = document.getElementById('scriptTitleDisplay');
+        const scriptLines = document.getElementById('scriptLines');
+        const addLineBtn = document.getElementById('addLineBtn');
+        const saveScriptBtn = document.getElementById('saveScriptBtn');
+        const exportScriptBtn = document.getElementById('exportScriptBtn');
+        const shareScriptBtn = document.getElementById('shareScriptBtn');
+        const saveStatus = document.getElementById('saveStatus');
+        const exportOptions = document.getElementById('exportOptions');
+        const exportPdfBtn = document.getElementById('exportPdfBtn');
+        const exportTextBtn = document.getElementById('exportTextBtn');
+        const cancelExportBtn = document.getElementById('cancelExportBtn');
+        const startNewScriptBtn = document.getElementById('startNewScriptBtn');
+        const openExistingScriptBtn = document.getElementById('openExistingScriptBtn');
+
+        // Line types for manga script
+        const lineTypes = [
+            'TITLE',
+            'SCENE',
+            'PANEL',
+            'CHARACTER',
+            'DIALOGUE',
+            'ACTION',
+            'NOTE',
+            'TRANSITION'
+        ];
+
+        // Current script data
+        let currentScript = {
+            id: null,
+            name: '',
+            password: '',
+            content: [],
+            lastSaved: null
+        };
+
+        // Show modal to create new script
+        function showNewScriptModal() {
+            document.getElementById('scriptName').value = '';
+            document.getElementById('scriptPassword').value = '';
+            newScriptModal.style.display = 'flex';
+        }
+
+        // Show empty state
+        function showEmptyState() {
+            scriptContainer.style.display = 'none';
+            emptyState.style.display = 'block';
+        }
+
+        // Show script editor
+        function showScriptEditor() {
+            emptyState.style.display = 'none';
+            scriptContainer.style.display = 'block';
+        }
+
+        // Event listeners
+        newScriptBtn.addEventListener('click', showNewScriptModal);
+        startNewScriptBtn.addEventListener('click', showNewScriptModal);
+        openExistingScriptBtn.addEventListener('click', () => {
+            openScriptModal.style.display = 'flex';
+        });
+
+        // Cancel creating new script
+        cancelCreateBtn.addEventListener('click', () => {
+            newScriptModal.style.display = 'none';
+        });
+
+        // Cancel opening script
+        cancelOpenBtn.addEventListener('click', () => {
+            openScriptModal.style.display = 'none';
+        });
+
+        // Create new script
+        createScriptBtn.addEventListener('click', async () => {
+            const name = document.getElementById('scriptName').value;
+            const password = document.getElementById('scriptPassword').value;
+            
+            if (!name || !password) {
+                alert('Please enter both a script name and password');
+                return;
+            }
+            
+            // Generate a random ID (in a real app, this would come from the server)
+            const id = 'kirmada_' + Math.random().toString(36).substr(2, 9);
+            
+            currentScript = {
+                id,
+                name,
+                password,
+                content: [
+                    { type: 'TITLE', text: name },
+                    { type: 'SCENE', text: 'INT. LOCATION - TIME' },
+                    { type: 'CHARACTER', text: 'CHARACTER NAME' },
+                    { type: 'DIALOGUE', text: 'Character dialogue goes here' }
+                ],
+                lastSaved: null
+            };
+            
+            // In a real app, you would save to your cloud backend here
+            // await saveScriptToCloud(currentScript);
+            
+            // Update UI
+            scriptTitleDisplay.textContent = name;
+            renderScriptContent();
+            showScriptEditor();
+            newScriptModal.style.display = 'none';
+            
+            // Show script ID to user
+            setTimeout(() => {
+                alert(`Your script ID is: ${id}\n\nShare this ID and password with collaborators.`);
+            }, 500);
+        });
+
+        // Open existing script
+        openScriptBtn.addEventListener('click', async () => {
+            const scriptId = document.getElementById('openScriptId').value;
+            const password = document.getElementById('openScriptPassword').value;
+            
+            if (!scriptId || !password) {
+                alert('Please enter both script ID and password');
+                return;
+            }
+            
+            // In a real app, you would load from your cloud backend here
+            // currentScript = await loadScriptFromCloud(scriptId, password);
+            
+            // For demo purposes, we'll just create a dummy script
+            currentScript = {
+                id: scriptId,
+                name: 'Demo Script',
+                password: password,
+                content: [
+                    { type: 'TITLE', text: 'Demo Script' },
+                    { type: 'SCENE', text: 'EXT. CITY STREET - NIGHT' },
+                    { type: 'ACTION', text: 'Rain falls on the neon-lit streets. Our hero walks slowly, hands in pockets.' },
+                    { type: 'CHARACTER', text: 'PROTAGONIST' },
+                    { type: 'DIALOGUE', text: '(muttering)\nThis city eats people like me for breakfast.' }
+                ],
+                lastSaved: new Date()
+            };
+            
+            // Update UI
+            scriptTitleDisplay.textContent = currentScript.name;
+            renderScriptContent();
+            showScriptEditor();
+            openScriptModal.style.display = 'none';
+            updateSaveStatus();
+        });
+
+        // Add new line to script
+        addLineBtn.addEventListener('click', () => {
+            currentScript.content.push({ type: 'ACTION', text: '' });
+            renderScriptContent();
+        });
+
+        // Save script
+        saveScriptBtn.addEventListener('click', async () => {
+            // In a real app, you would save to your cloud backend here
+            // await saveScriptToCloud(currentScript);
+            
+            currentScript.lastSaved = new Date();
+            updateSaveStatus();
+            
+            // Show temporary confirmation
+            const originalText = saveStatus.textContent;
+            saveStatus.textContent = 'Script saved successfully!';
+            setTimeout(() => {
+                saveStatus.textContent = originalText;
+            }, 2000);
+        });
+
+        // Share script
+        shareScriptBtn.addEventListener('click', () => {
+            alert(`Share this script with others using:\n\nScript ID: ${currentScript.id}\nPassword: ${currentScript.password}\n\nThey can open it from the main screen.`);
+        });
+
+        // Toggle export options
+        exportScriptBtn.addEventListener('click', () => {
+            exportOptions.classList.toggle('show');
+        });
+
+        // Cancel export
+        cancelExportBtn.addEventListener('click', () => {
+            exportOptions.classList.remove('show');
+        });
+
+        // Export as PDF
+        exportPdfBtn.addEventListener('click', async () => {
+            exportOptions.classList.remove('show');
+            
+            // Create a temporary div for PDF generation
+            const pdfContainer = document.createElement('div');
+            pdfContainer.style.width = '210mm';
+            pdfContainer.style.padding = '20mm';
+            pdfContainer.style.background = 'white';
+            pdfContainer.style.boxShadow = '0 0 10px rgba(0,0,0,0.1)';
+            
+            // Add title
+            const title = document.createElement('h1');
+            title.textContent = currentScript.name;
+            title.style.fontSize = '24pt';
+            title.style.color = '#6a1b9a';
+            title.style.marginBottom = '20px';
+            title.style.borderBottom = '2px solid #ff9800';
+            title.style.paddingBottom = '10px';
+            pdfContainer.appendChild(title);
+            
+            // Add content
+            currentScript.content.forEach(line => {
+                const lineDiv = document.createElement('div');
+                lineDiv.style.marginBottom = '15px';
+                
+                const typeSpan = document.createElement('span');
+                typeSpan.textContent = `${line.type}: `;
+                typeSpan.style.fontWeight = 'bold';
+                typeSpan.style.color = '#555';
+                
+                const textSpan = document.createElement('span');
+                textSpan.textContent = line.text;
+                
+                if (line.type === 'TITLE') {
+                    lineDiv.style.fontSize = '18pt';
+                    lineDiv.style.fontWeight = 'bold';
+                    lineDiv.style.marginBottom = '30px';
+                } else if (line.type === 'SCENE') {
+                    lineDiv.style.fontSize = '14pt';
+                    lineDiv.style.textDecoration = 'underline';
+                    lineDiv.style.marginTop = '20px';
+                } else if (line.type === 'CHARACTER') {
+                    lineDiv.style.marginLeft = '30px';
+                    lineDiv.style.fontWeight = 'bold';
+                } else if (line.type === 'DIALOGUE') {
+                    lineDiv.style.marginLeft = '50px';
+                } else if (line.type === 'ACTION') {
+                    lineDiv.style.fontStyle = 'italic';
+                }
+                
+                lineDiv.appendChild(typeSpan);
+                lineDiv.appendChild(textSpan);
+                pdfContainer.appendChild(lineDiv);
+            });
+            
+            document.body.appendChild(pdfContainer);
+            
+            // Generate PDF
+            try {
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm'
+                });
+                
+                await html2canvas(pdfContainer, {
+                    scale: 2,
+                    logging: false,
+                    useCORS: true
+                }).then(canvas => {
+                    const imgData = canvas.toDataURL('image/png');
+                    const imgWidth = 210; // A4 width in mm
+                    const pageHeight = 295; // A4 height in mm
+                    const imgHeight = canvas.height * imgWidth / canvas.width;
+                    let heightLeft = imgHeight;
+                    let position = 0;
+                    
+                    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                    
+                    while (heightLeft >= 0) {
+                        position = heightLeft - imgHeight;
+                        pdf.addPage();
+                        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+                        heightLeft -= pageHeight;
+                    }
+                    
+                    pdf.save(`${currentScript.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_script.pdf`);
+                });
+            } catch (error) {
+                console.error('Error generating PDF:', error);
+                alert('Error generating PDF. Please try again.');
+            } finally {
+                document.body.removeChild(pdfContainer);
+            }
+        });
+
+        // Export as Text
+        exportTextBtn.addEventListener('click', () => {
+            exportOptions.classList.remove('show');
+            
+            let textContent = `${currentScript.name}\n\n`;
+            textContent += '='.repeat(currentScript.name.length) + '\n\n';
+            
+            currentScript.content.forEach(line => {
+                if (line.type === 'TITLE') {
+                    textContent += `${line.text}\n`;
+                    textContent += '='.repeat(line.text.length) + '\n\n';
+                } else {
+                    textContent += `${line.type}: ${line.text}\n\n`;
+                }
+            });
+            
+            const blob = new Blob([textContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${currentScript.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_script.txt`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+
+        // Render script content
+        function renderScriptContent() {
+            scriptLines.innerHTML = '';
+            
+            currentScript.content.forEach((line, index) => {
+                const lineDiv = document.createElement('div');
+                lineDiv.className = 'script-line';
+                
+                const typeSelect = document.createElement('select');
+                lineTypes.forEach(type => {
+                    const option = document.createElement('option');
+                    option.value = type;
+                    option.textContent = type;
+                    option.selected = type === line.type;
+                    typeSelect.appendChild(option);
+                });
+                
+                typeSelect.addEventListener('change', (e) => {
+                    currentScript.content[index].type = e.target.value;
+                });
+                
+                const textArea = document.createElement('textarea');
+                textArea.value = line.text;
+                textArea.addEventListener('input', (e) => {
+                    currentScript.content[index].text = e.target.value;
+                });
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.innerHTML = '&times;';
+                deleteBtn.addEventListener('click', () => {
+                    currentScript.content.splice(index, 1);
+                    renderScriptContent();
+                });
+                
+                lineDiv.appendChild(typeSelect);
+                lineDiv.appendChild(textArea);
+                lineDiv.appendChild(deleteBtn);
+                scriptLines.appendChild(lineDiv);
+            });
+        }
+
+        // Update save status text
+        function updateSaveStatus() {
+            if (currentScript.lastSaved) {
+                const options = { 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric',
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                };
+                saveStatus.textContent = `Last saved: ${currentScript.lastSaved.toLocaleDateString('en-US', options)}`;
+            } else {
+                saveStatus.textContent = 'Not saved yet';
+            }
+        }
+
+        // Initialize
+        updateSaveStatus();
+        showEmptyState();
+    </script>
+</body>
+      </html>
