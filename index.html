@@ -2,74 +2,161 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <title>Kirmada 💚 Chat Room</title>
+  <title>P2P Chat 💬</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
   <script src="chat.js" defer></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Orbitron&display=swap" rel="stylesheet">
   <style>
-    body {
-      background: radial-gradient(ellipse at center, #121212 0%, #000000 100%);
-      color: #00ff88;
-      font-family: 'Orbitron', sans-serif;
-      text-align: center;
-      padding: 2rem;
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
 
-    h1 {
-      color: #00ffaa;
-      margin-bottom: 1rem;
+    body {
+      background: #e5ddd5;
+      font-family: 'Segoe UI', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      width: 100%;
+      padding: 1rem;
+      background: #075e54;
+      color: white;
+      font-size: 1.5rem;
+      text-align: center;
+    }
+
+    #connect-box {
+      margin: 1rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    #connect-id {
+      padding: 0.5rem;
+      font-size: 1rem;
+      margin: 0.5rem;
+      width: 90%;
+      max-width: 300px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+
+    button {
+      background: #25d366;
+      border: none;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    #chat-container {
+      background: white;
+      width: 100%;
+      max-width: 500px;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      border-top: 1px solid #ddd;
     }
 
     #chat {
-      border: 2px solid #00ff88;
+      flex: 1;
       padding: 1rem;
-      margin-top: 1rem;
-      max-height: 300px;
       overflow-y: auto;
-      background: rgba(0, 0, 0, 0.7);
-      border-radius: 12px;
-      text-align: left;
-    }
-
-    input, button {
-      padding: 0.6rem;
-      margin: 0.4rem;
-      font-size: 1rem;
-      background: #111;
-      color: #00ff88;
-      border: 2px solid #00ffaa;
-      border-radius: 6px;
+      display: flex;
+      flex-direction: column;
     }
 
     .msg {
-      margin: 0.5rem 0;
+      margin-bottom: 10px;
+      max-width: 75%;
+      padding: 0.7rem;
+      border-radius: 12px;
+      font-size: 1rem;
+      word-wrap: break-word;
     }
 
-    .you { color: #ff80bf; }
-    .them { color: #80d4ff; }
-    .system { color: #bbbbbb; font-style: italic; }
+    .you {
+      align-self: flex-end;
+      background: #dcf8c6;
+    }
+
+    .them {
+      align-self: flex-start;
+      background: #f1f0f0;
+    }
+
+    .system {
+      align-self: center;
+      font-size: 0.8rem;
+      color: #777;
+    }
 
     #typing {
-      margin-top: 0.5rem;
-      font-size: 0.9rem;
-      color: #888;
+      padding: 0.3rem 1rem;
+      font-style: italic;
+      font-size: 0.85rem;
+      color: #666;
+    }
+
+    #input-area {
+      display: flex;
+      padding: 0.5rem;
+      background: #f0f0f0;
+    }
+
+    #msg {
+      flex: 1;
+      padding: 0.5rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 20px;
+      outline: none;
+      background: white;
+      margin-right: 0.5rem;
+    }
+
+    #send-btn {
+      background: #128c7e;
+      color: white;
+      padding: 0.5rem 1rem;
+      border: none;
+      border-radius: 50px;
+    }
+
+    audio {
+      display: none;
     }
   </style>
 </head>
 <body>
-  <h1>💬 Kirmada P2P Chat 💬</h1>
-  <p>Your ID: <span id="my-id">Loading...</span></p>
-  <input id="connect-id" placeholder="Enter friend's ID" />
-  <button onclick="connect()">Connect</button>
+  <header>P2P Chat 💬</header>
 
-  <div id="chat"></div>
-  <div id="typing"></div>
+  <div id="connect-box">
+    <p>Your ID: <span id="my-id">Loading...</span></p>
+    <input id="connect-id" placeholder="Enter friend's ID" />
+    <button onclick="connect()">Connect</button>
+  </div>
 
-  <input id="msg" placeholder="Type your message or emoji..." oninput="sendTyping()" />
-  <button onclick="sendMsg()">Send</button>
+  <div id="chat-container">
+    <div id="chat"></div>
+    <div id="typing"></div>
+    <div id="input-area">
+      <input id="msg" placeholder="Type a message..." oninput="sendTyping()" />
+      <button id="send-btn" onclick="sendMsg()">➤</button>
+    </div>
+  </div>
 
-  <!-- Whisper Sound -->
   <audio id="whisper" src="https://freesound.org/data/previews/341/341695_6262322-lq.mp3"></audio>
 </body>
 </html>
