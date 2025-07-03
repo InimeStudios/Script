@@ -1,5 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
+<!DOCTYPE html><html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,37 +16,34 @@
       <button onclick="startPrivate()">🔒 Private Room</button>
       <button onclick="startPublic()">🌍 Join Public Room</button>
       <button onclick="createPublicHost()">🚀 Host Public Room</button>
-    </div>
-
-    <div id="privateTab" class="tab">
-      <p>Your ID: <span id="my-id">...</span></p>
-      <input id="peerId" placeholder="Enter friend's ID">
-      <button onclick="connectPrivate()">Connect</button>
-      <div class="chat-box">
-        <div id="privateMsgs" class="messages"></div>
-        <div class="input-box">
-          <input id="privateInput" placeholder="Type message...">
-          <button onclick="sendPrivate()">Send</button>
-        </div>
-      </div>
-      <button id="backBtn" onclick="goBack()">⬅️ Exit</button>
-    </div>
-
-    <div id="publicTab" class="tab">
-      <p id="guestName"></p>
-      <div class="chat-box">
-        <div id="publicMsgs" class="messages"></div>
-        <div class="input-box">
-          <input id="publicInput" placeholder="Type message...">
-          <button id="publicSendBtn" disabled onclick="sendPublic()">Send</button>
-        </div>
-      </div>
-      <button id="backBtn" onclick="goBack()">⬅️ Exit</button>
+    </div><div id="privateTab" class="tab">
+  <p>Your ID: <span id="my-id">...</span></p>
+  <input id="peerId" placeholder="Enter friend's ID">
+  <button onclick="connectPrivate()">Connect</button>
+  <div class="chat-box">
+    <div id="privateMsgs" class="messages"></div>
+    <div class="input-box">
+      <input id="privateInput" placeholder="Type message...">
+      <button onclick="sendPrivate()">Send</button>
     </div>
   </div>
-  <footer>Made with ❤️ by Kirmada | No data stored, no signup, just pure connection.</footer>
+  <button id="backBtn" onclick="goBack()">⬅️ Exit</button>
+</div>
 
-  <script>
+<div id="publicTab" class="tab">
+  <p id="guestName"></p>
+  <div class="chat-box">
+    <div id="publicMsgs" class="messages"></div>
+    <div class="input-box">
+      <input id="publicInput" placeholder="Type message...">
+      <button id="publicSendBtn" disabled onclick="sendPublic()">Send</button>
+    </div>
+  </div>
+  <button id="backBtn" onclick="goBack()">⬅️ Exit</button>
+</div>
+
+  </div>
+  <footer>Made with ❤️ by Kirmada | No data stored, no signup, just pure connection.</footer>  <script>
     let peer = new Peer();
     let conn;
     let publicConn;
@@ -140,6 +136,5 @@
       const box = document.getElementById(containerId);
       box.scrollTop = box.scrollHeight;
     }
-  </script>
-</body>
+  </script></body>
 </html>
