@@ -19,7 +19,7 @@ function connect() {
 
 function setupConnection() {
   conn.on('open', () => {
-    appendMsg("Connected 💖", 'system');
+    appendMsg("Connected 🎉", 'system');
   });
 
   conn.on('data', (data) => {
@@ -51,7 +51,7 @@ function appendMsg(msg, who) {
   const chat = document.getElementById('chat');
   const el = document.createElement('div');
   el.className = `msg ${who}`;
-  el.textContent = (who === 'you' ? "You: " : who === 'them' ? "Them: " : "") + msg;
+  el.textContent = msg;
   chat.appendChild(el);
   chat.scrollTop = chat.scrollHeight;
 }
@@ -77,4 +77,4 @@ function showTyping(text) {
 function hideTyping() {
   const typing = document.getElementById('typing');
   typing.textContent = "";
-              }
+}
