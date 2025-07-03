@@ -1,155 +1,58 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Kirmada Script Maker</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <title>Kirmada Live Chat 💚</title>
+  <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+  <script src="chat.js" defer></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 0;
-      background: #f5f5f5;
-      color: #333;
-    }
-    header {
-      background: #6a1b9a;
-      color: white;
-      padding: 1rem;
+      background: #0f0f0f;
+      color: #fff;
+      font-family: 'Arial', sans-serif;
       text-align: center;
+      padding: 2rem;
     }
-    .container {
+    h1 {
+      color: #00ff88;
+    }
+    #chat {
+      border: 1px solid #333;
       padding: 1rem;
+      margin-top: 1rem;
+      max-height: 300px;
+      overflow-y: auto;
+      background: #1c1c1c;
     }
-    .input-group {
-      margin-bottom: 1rem;
-    }
-    .input-group input, .input-group textarea {
-      width: 100%;
+    input, button {
       padding: 0.5rem;
-      margin-top: 0.25rem;
+      margin: 0.3rem;
+      font-size: 1rem;
+      background: #222;
+      color: #00ff88;
+      border: 1px solid #00ff88;
+      border-radius: 5px;
     }
-    button {
-      padding: 0.5rem 1rem;
-      margin-right: 0.5rem;
-      cursor: pointer;
+    .msg {
+      text-align: left;
+      margin: 0.5rem 0;
     }
-    #lines div {
-      margin-bottom: 1rem;
+    .you {
+      color: #ff80bf;
     }
-    .line {
-      display: flex;
-      gap: 1rem;
-      align-items: flex-start;
-    }
-    .line select, .line textarea {
-      flex: 1;
+    .them {
+      color: #80d4ff;
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Kirmada Script Maker</h1>
-  </header>
-  <div class="container">
-    <div class="input-group">
-      <label>Script ID: <input type="text" id="scriptId"></label>
-    </div>
-    <div class="input-group">
-      <label>Password: <input type="password" id="password"></label>
-    </div>
-    <button onclick="createScript()">Create Script</button>
-    <button onclick="openScript()">Open Script</button>
-    <button onclick="addLine()">Add Line</button>
-    <button onclick="saveScript()">Save Script</button>
-    <div class="input-group">
-      <label>Title: <input type="text" id="title"></label>
-    </div>
-    <div id="lines"></div>
-  </div>
+  <h1>Kirmada 💚 P2P Chat</h1>
+  <p>Your ID: <span id="my-id">...</span></p>
+  <input id="connect-id" placeholder="Enter friend's ID" />
+  <button onclick="connect()">Connect</button>
 
-  <script>
-    let currentScript = {
-      id: '',
-      name: '',
-      passwordHash: '',
-      content: []
-    };
-
-    async function hashPassword(password) {
-      const buf = new TextEncoder().encode(password);
-      const hashBuf = await crypto.subtle.digest('SHA-256', buf);
-      return Array.from(new Uint8Array(hashBuf)).map(b => b.toString(16).padStart(2, '0')).join('');
-    }
-
-    async function saveScript() {
-      currentScript.name = document.getElementById('title').value;
-      const password = document.getElementById('password').value;
-      currentScript.passwordHash = await hashPassword(password);
-      const res = await fetch('https://YOUR_VERCEL_URL/api/script', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(currentScript)
-      });
-      if (res.ok) alert("Script saved successfully.");
-      else alert("Failed to save.");
-    }
-
-    async function openScript() {
-      const id = document.getElementById('scriptId').value;
-      const password = document.getElementById('password').value;
-      const res = await fetch(`https://YOUR_VERCEL_URL/api/script?id=${id}`);
-      if (!res.ok) return alert("Script not found.");
-      const data = await res.json();
-      const hash = await hashPassword(password);
-      if (data.passwordHash !== hash) return alert("Wrong password.");
-      currentScript = data;
-      document.getElementById('title').value = data.name;
-      renderLines();
-    }
-
-    function createScript() {
-      const id = document.getElementById('scriptId').value;
-      const name = document.getElementById('title').value;
-      currentScript = {
-        id,
-        name,
-        content: [],
-        passwordHash: ''
-      };
-      renderLines();
-    }
-
-    function addLine() {
-      currentScript.content.push({ type: 'DIALOGUE', text: '' });
-      renderLines();
-    }
-
-    function renderLines() {
-      const container = document.getElementById('lines');
-      container.innerHTML = '';
-      currentScript.content.forEach((line, i) => {
-        const div = document.createElement('div');
-        div.className = 'line';
-        const sel = document.createElement('select');
-        ['TITLE','SCENE','CHARACTER','DIALOGUE','ACTION'].forEach(type => {
-          const opt = document.createElement('option');
-          opt.value = type;
-          opt.textContent = type;
-          if (line.type === type) opt.selected = true;
-          sel.appendChild(opt);
-        });
-        sel.onchange = () => currentScript.content[i].type = sel.value;
-        const ta = document.createElement('textarea');
-        ta.value = line.text;
-        ta.oninput = () => currentScript.content[i].text = ta.value;
-        div.appendChild(sel);
-        div.appendChild(ta);
-        container.appendChild(div);
-      });
-    }
-  </script>
+  <div id="chat"></div>
+  <input id="msg" placeholder="Type your message..." />
+  <button onclick="sendMsg()">Send</button>
 </body>
 </html>
