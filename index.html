@@ -257,6 +257,90 @@
             color: var(--danger);
         }
         
+        .room-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 6px;
+        }
+        
+        .room-users {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .user-badge {
+            background-color: #e9ecef;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+        }
+        
+        .room-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .room-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .room-form input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+        }
+        
+        .room-form button {
+            padding: 10px 15px;
+            background-color: var(--success);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+        
+        .room-list {
+            margin-top: 20px;
+        }
+        
+        .room-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin-bottom: 10px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .room-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .room-name {
+            font-weight: bold;
+        }
+        
+        .room-count {
+            background-color: var(--primary);
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+        }
+        
         footer {
             text-align: center;
             margin-top: 30px;
@@ -285,6 +369,10 @@
             .msg {
                 max-width: 90%;
             }
+            
+            .room-form {
+                flex-direction: column;
+            }
         }
     </style>
 </head>
@@ -299,11 +387,8 @@
             <button class="btn btn-primary" onclick="startPrivate()">
                 <span>🔒</span> Private Room
             </button>
-            <button class="btn btn-success" onclick="startPublic()">
-                <span>🌍</span> Join Public Room
-            </button>
-            <button class="btn btn-info" onclick="createPublicHost()">
-                <span>🚀</span> Host Public Room
+            <button class="btn btn-success" onclick="showPublicRoomOptions()">
+                <span>🌍</span> Public Rooms
             </button>
         </div>
         
@@ -331,9 +416,32 @@
             <button class="back-btn" onclick="goBack()">⬅️ Back to Menu</button>
         </div>
         
+        <div id="publicOptionsTab" class="tab">
+            <div class="room-form">
+                <input id="roomNameInput" placeholder="Enter room name">
+                <button onclick="createPublicRoom()">Create Room</button>
+            </div>
+            
+            <div class="room-list" id="availableRooms">
+                <!-- Room list will be populated here -->
+            </div>
+            
+            <button class="back-btn" onclick="goBack()">⬅️ Back to Menu</button>
+        </div>
+        
         <div id="publicTab" class="tab">
-            <div class="id-display" id="guestName"></div>
-            <div id="publicStatus" class="status disconnected">Disconnected</div>
+            <div class="room-info">
+                <div>
+                    <div id="guestName"></div>
+                    <div id="roomStatus" class="status disconnected">Disconnected</div>
+                    <div class="room-users" id="roomUsersList">
+                        <!-- Active users will be listed here -->
+                    </div>
+                </div>
+                <div class="room-actions">
+                    <button onclick="leavePublicRoom()">Leave Room</button>
+                </div>
+            </div>
             
             <div class="chat-box">
                 <div id="publicMsgs" class="messages"></div>
@@ -355,11 +463,13 @@
         // Global variables
         let peer;
         let conn;
-        let publicConn;
+        let currentPublicRoom = null;
         let publicConnections = [];
-        let publicRoomId = "kirmada-public-room";
+        let activePublicRooms = {};
         let guestId = "Guest" + Math.floor(Math.random() * 10000);
         let isPublicHost = false;
+        let currentRoomUsers = {};
+        let roomDiscoveryConn = null;
         
         // Initialize PeerJS when the page loads
         window.onload = function() {
@@ -381,63 +491,177 @@
             // Handle peer open event
             peer.on('open', id => {
                 document.getElementById('my-id').textContent = id;
+                // Initialize room discovery after peer is ready
+                initializeRoomDiscovery();
             });
             
-            // Handle incoming connections
+            // Handle incoming connections for private chat
             peer.on('connection', c => {
-                if (isPublicHost) {
-                    // Public room host logic
-                    c.on('data', data => {
-                        if (data.type === "public") {
-                            // Broadcast to all connected clients
-                            publicConnections.forEach(client => {
-                                if (client !== c && client.open) {
-                                    client.send(data);
-                                }
-                            });
-                            appendMsg('publicMsgs', data.msg, data.sender === guestId ? 'you' : 'them');
-                        }
-                    });
-                    
-                    c.on('open', () => {
-                        publicConnections.push(c);
-                        updatePublicStatus();
-                    });
-                    
-                    c.on('close', () => {
-                        publicConnections = publicConnections.filter(client => client !== c);
-                        updatePublicStatus();
-                    });
+                if (currentPublicRoom) {
+                    // Public room connection logic
+                    handlePublicRoomConnection(c);
                 } else {
                     // Private connection logic
-                    c.on('data', data => {
-                        if (data.type === "private") {
-                            appendMsg('privateMsgs', data.msg, 'them');
-                        }
-                    });
-                    
-                    conn = c;
-                    updatePrivateStatus();
+                    handlePrivateConnection(c);
                 }
             });
             
             // Handle errors
             peer.on('error', err => {
                 console.error('PeerJS error:', err);
-                if (err.type === 'peer-unavailable') {
-                    appendMsg('privateMsgs', 'Peer unavailable or disconnected', 'system');
-                } else if (err.type === 'unavailable-id') {
-                    appendMsg('privateMsgs', 'The peer ID is unavailable', 'system');
+                if (currentPublicRoom) {
+                    appendMsg('publicMsgs', `Error: ${err.message}`, 'system');
                 } else {
-                    appendMsg(isPublicHost ? 'publicMsgs' : 'privateMsgs', `Error: ${err.message}`, 'system');
+                    appendMsg('privateMsgs', `Error: ${err.message}`, 'system');
                 }
+            });
+        }
+        
+        function initializeRoomDiscovery() {
+            // Connect to a well-known room discovery peer
+            roomDiscoveryConn = peer.connect('kirmada-room-discovery', {
+                reliable: true,
+                serialization: 'json'
+            });
+            
+            roomDiscoveryConn.on('open', () => {
+                // Request list of active rooms
+                roomDiscoveryConn.send({
+                    type: 'discovery',
+                    action: 'get-rooms'
+                });
+            });
+            
+            roomDiscoveryConn.on('data', data => {
+                if (data.type === 'room-list') {
+                    updateAvailableRooms(data.rooms);
+                }
+            });
+            
+            roomDiscoveryConn.on('close', () => {
+                console.log('Room discovery connection closed');
+            });
+            
+            roomDiscoveryConn.on('error', err => {
+                console.error('Room discovery error:', err);
+            });
+        }
+        
+        function updateAvailableRooms(rooms) {
+            const roomsContainer = document.getElementById('availableRooms');
+            roomsContainer.innerHTML = '';
+            
+            if (Object.keys(rooms).length === 0) {
+                roomsContainer.innerHTML = '<p>No public rooms available. Create one!</p>';
+                return;
+            }
+            
+            for (const [roomId, roomInfo] of Object.entries(rooms)) {
+                const roomItem = document.createElement('div');
+                roomItem.className = 'room-item';
+                roomItem.innerHTML = `
+                    <div class="room-name">${roomInfo.name}</div>
+                    <div class="room-count">${roomInfo.userCount} user${roomInfo.userCount !== 1 ? 's' : ''}</div>
+                `;
+                roomItem.onclick = () => joinPublicRoom(roomId, roomInfo.name);
+                roomsContainer.appendChild(roomItem);
+            }
+        }
+        
+        function handlePublicRoomConnection(c) {
+            c.on('data', data => {
+                if (data.type === "public-message") {
+                    // Broadcast to all connected clients except sender
+                    publicConnections.forEach(client => {
+                        if (client !== c && client.open) {
+                            client.send(data);
+                        }
+                    });
+                    appendMsg('publicMsgs', data.message, data.sender === guestId ? 'you' : 'them');
+                } else if (data.type === "user-list") {
+                    // Update user list display
+                    currentRoomUsers = data.users;
+                    updateUserList();
+                } else if (data.type === "user-joined") {
+                    // Add new user to list
+                    currentRoomUsers[data.userId] = data.username;
+                    updateUserList();
+                    appendMsg('publicMsgs', `${data.username} joined the room`, 'system');
+                } else if (data.type === "user-left") {
+                    // Remove user from list
+                    if (currentRoomUsers[data.userId]) {
+                        appendMsg('publicMsgs', `${currentRoomUsers[data.userId]} left the room`, 'system');
+                        delete currentRoomUsers[data.userId];
+                        updateUserList();
+                    }
+                }
+            });
+            
+            c.on('open', () => {
+                publicConnections.push(c);
+                updatePublicRoomStatus();
                 
-                if (conn) {
-                    conn.close();
-                    conn = null;
+                // Send user info to host
+                if (!isPublicHost && publicConnections.length === 1) {
+                    c.send({
+                        type: "user-joined",
+                        userId: peer.id,
+                        username: guestId
+                    });
                 }
+            });
+            
+            c.on('close', () => {
+                publicConnections = publicConnections.filter(client => client !== c);
+                updatePublicRoomStatus();
+                
+                // Notify host if this was a participant connection
+                if (!isPublicHost && publicConnections.length === 0) {
+                    leavePublicRoom();
+                }
+            });
+            
+            c.on('error', err => {
+                console.error('Public connection error:', err);
+                publicConnections = publicConnections.filter(client => client !== c);
+                updatePublicRoomStatus();
+            });
+        }
+        
+        function handlePrivateConnection(c) {
+            conn = c;
+            updatePrivateStatus();
+            
+            c.on('data', data => {
+                if (data.type === "private-message") {
+                    appendMsg('privateMsgs', data.message, 'them');
+                }
+            });
+            
+            c.on('close', () => {
+                appendMsg('privateMsgs', 'Peer disconnected', 'system');
+                conn = null;
                 updatePrivateStatus();
             });
+            
+            c.on('error', err => {
+                console.error('Private connection error:', err);
+                appendMsg('privateMsgs', `Connection error: ${err.message}`, 'system');
+                conn = null;
+                updatePrivateStatus();
+            });
+        }
+        
+        function updateUserList() {
+            const usersList = document.getElementById('roomUsersList');
+            usersList.innerHTML = '';
+            
+            for (const [userId, username] of Object.entries(currentRoomUsers)) {
+                const userBadge = document.createElement('div');
+                userBadge.className = 'user-badge';
+                userBadge.textContent = username;
+                usersList.appendChild(userBadge);
+            }
         }
         
         // Navigation functions
@@ -451,9 +675,8 @@
                 conn = null;
             }
             
-            if (publicConn) {
-                publicConn.close();
-                publicConn = null;
+            if (currentPublicRoom) {
+                leavePublicRoom();
             }
             
             // Reset UI
@@ -461,65 +684,160 @@
             document.getElementById('privateSendBtn').disabled = true;
             document.getElementById('privateStatus').className = 'status disconnected';
             document.getElementById('privateStatus').textContent = 'Disconnected';
-            document.getElementById('publicStatus').className = 'status disconnected';
-            document.getElementById('publicStatus').textContent = 'Disconnected';
+            document.getElementById('roomStatus').className = 'status disconnected';
+            document.getElementById('roomStatus').textContent = 'Disconnected';
             
             isPublicHost = false;
+            currentPublicRoom = null;
+            publicConnections = [];
+        }
+        
+        function showPublicRoomOptions() {
+            document.getElementById('mainMenu').classList.remove('active');
+            document.getElementById('publicOptionsTab').classList.add('active');
         }
         
         function startPrivate() {
             document.getElementById('mainMenu').classList.remove('active');
             document.getElementById('privateTab').classList.add('active');
+            document.getElementById('privateMsgs').innerHTML = '';
             appendMsg('privateMsgs', 'Private chat started. Share your ID or enter a peer ID to connect.', 'system');
         }
         
-        function startPublic() {
-            document.getElementById('mainMenu').classList.remove('active');
-            document.getElementById('publicTab').classList.add('active');
-            document.getElementById('guestName').textContent = `You are ${guestId}`;
+        function createPublicRoom() {
+            const roomName = document.getElementById('roomNameInput').value.trim();
+            if (!roomName) {
+                alert('Please enter a room name');
+                return;
+            }
             
-            // Connect to public room
-            publicConn = peer.connect(publicRoomId, {
+            // Generate a unique room ID
+            const roomId = 'room-' + Math.random().toString(36).substr(2, 9);
+            currentPublicRoom = roomId;
+            isPublicHost = true;
+            
+            // Register the room with the discovery service
+            if (roomDiscoveryConn && roomDiscoveryConn.open) {
+                roomDiscoveryConn.send({
+                    type: 'discovery',
+                    action: 'register-room',
+                    roomId: roomId,
+                    roomName: roomName,
+                    hostId: peer.id
+                });
+            }
+            
+            // Initialize room users with host
+            currentRoomUsers = {
+                [peer.id]: guestId + ' (Host)'
+            };
+            
+            document.getElementById('publicOptionsTab').classList.remove('active');
+            document.getElementById('publicTab').classList.add('active');
+            document.getElementById('publicMsgs').innerHTML = '';
+            document.getElementById('guestName').textContent = `Room: ${roomName}`;
+            document.getElementById('publicSendBtn').disabled = false;
+            document.getElementById('roomStatus').className = 'status connected';
+            document.getElementById('roomStatus').textContent = 'You are hosting this room';
+            
+            appendMsg('publicMsgs', `You created room "${roomName}". Share the room ID (${roomId}) with others to join.`, 'system');
+            updateUserList();
+        }
+        
+        function joinPublicRoom(roomId, roomName) {
+            currentPublicRoom = roomId;
+            isPublicHost = false;
+            
+            // Connect to the room host
+            const hostConn = peer.connect(roomId, {
                 reliable: true,
                 serialization: 'json'
             });
             
-            publicConn.on('open', () => {
+            hostConn.on('open', () => {
+                publicConnections.push(hostConn);
+                document.getElementById('publicOptionsTab').classList.remove('active');
+                document.getElementById('publicTab').classList.add('active');
+                document.getElementById('publicMsgs').innerHTML = '';
+                document.getElementById('guestName').textContent = `Room: ${roomName}`;
                 document.getElementById('publicSendBtn').disabled = false;
-                document.getElementById('publicStatus').className = 'status connected';
-                document.getElementById('publicStatus').textContent = 'Connected to public room';
-                appendMsg('publicMsgs', `Joined public room as ${guestId}`, 'system');
+                document.getElementById('roomStatus').className = 'status connected';
+                document.getElementById('roomStatus').textContent = 'Connected to room';
+                
+                appendMsg('publicMsgs', `You joined room "${roomName}" as ${guestId}`, 'system');
+                
+                // Request current user list
+                hostConn.send({
+                    type: "get-users",
+                    userId: peer.id,
+                    username: guestId
+                });
             });
             
-            publicConn.on('data', data => {
-                if (data.type === "public") {
-                    appendMsg('publicMsgs', data.msg, data.sender === guestId ? 'you' : 'them');
+            hostConn.on('data', data => {
+                if (data.type === "public-message") {
+                    appendMsg('publicMsgs', data.message, data.sender === guestId ? 'you' : 'them');
+                } else if (data.type === "user-list") {
+                    currentRoomUsers = data.users;
+                    updateUserList();
+                } else if (data.type === "user-joined") {
+                    currentRoomUsers[data.userId] = data.username;
+                    updateUserList();
+                    appendMsg('publicMsgs', `${data.username} joined the room`, 'system');
+                } else if (data.type === "user-left") {
+                    if (currentRoomUsers[data.userId]) {
+                        appendMsg('publicMsgs', `${currentRoomUsers[data.userId]} left the room`, 'system');
+                        delete currentRoomUsers[data.userId];
+                        updateUserList();
+                    }
                 }
             });
             
-            publicConn.on('close', () => {
-                document.getElementById('publicSendBtn').disabled = true;
-                document.getElementById('publicStatus').className = 'status disconnected';
-                document.getElementById('publicStatus').textContent = 'Disconnected from public room';
-                appendMsg('publicMsgs', 'Disconnected from public room', 'system');
+            hostConn.on('close', () => {
+                publicConnections = publicConnections.filter(c => c !== hostConn);
+                if (publicConnections.length === 0) {
+                    leavePublicRoom();
+                }
             });
             
-            publicConn.on('error', err => {
-                console.error('Public connection error:', err);
+            hostConn.on('error', err => {
+                console.error('Room connection error:', err);
                 appendMsg('publicMsgs', `Connection error: ${err.message}`, 'system');
+                publicConnections = publicConnections.filter(c => c !== hostConn);
+                if (publicConnections.length === 0) {
+                    leavePublicRoom();
+                }
             });
         }
         
-        function createPublicHost() {
-            isPublicHost = true;
-            document.getElementById('mainMenu').classList.remove('active');
-            document.getElementById('publicTab').classList.add('active');
-            document.getElementById('guestName').textContent = `${guestId} (Hosting Public Room)`;
-            document.getElementById('publicSendBtn').disabled = false;
-            document.getElementById('publicStatus').className = 'status connected';
-            document.getElementById('publicStatus').textContent = 'Hosting public room - others can join';
+        function leavePublicRoom() {
+            if (publicConnections.length > 0) {
+                // Notify host that we're leaving
+                publicConnections[0].send({
+                    type: "user-left",
+                    userId: peer.id
+                });
+                
+                // Close all connections
+                publicConnections.forEach(c => c.close());
+                publicConnections = [];
+            }
             
-            appendMsg('publicMsgs', 'You are now hosting the public room. Keep this tab open so others can join.', 'system');
+            // Unregister room if we were host
+            if (isPublicHost && roomDiscoveryConn && roomDiscoveryConn.open) {
+                roomDiscoveryConn.send({
+                    type: 'discovery',
+                    action: 'unregister-room',
+                    roomId: currentPublicRoom
+                });
+            }
+            
+            currentPublicRoom = null;
+            isPublicHost = false;
+            currentRoomUsers = {};
+            
+            document.getElementById('publicTab').classList.remove('active');
+            document.getElementById('publicOptionsTab').classList.add('active');
         }
         
         // Connection functions
@@ -546,8 +864,8 @@
             });
             
             conn.on('data', data => {
-                if (data.type === "private") {
-                    appendMsg('privateMsgs', data.msg, 'them');
+                if (data.type === "private-message") {
+                    appendMsg('privateMsgs', data.message, 'them');
                 }
             });
             
@@ -578,8 +896,8 @@
             
             try {
                 conn.send({
-                    type: "private",
-                    msg: msg
+                    type: "private-message",
+                    message: msg
                 });
                 appendMsg('privateMsgs', msg, 'you');
                 input.value = "";
@@ -597,32 +915,30 @@
             
             const fullMsg = `${guestId}: ${msg}`;
             
-            if (isPublicHost) {
-                // As host, broadcast to all connected clients
-                const data = {
-                    type: "public",
-                    msg: fullMsg,
-                    sender: guestId
-                };
-                
-                publicConnections.forEach(client => {
-                    if (client.open) client.send(data);
-                });
-                appendMsg('publicMsgs', fullMsg, 'you');
-            } else if (publicConn && publicConn.open) {
-                // As client, send to host
-                publicConn.send({
-                    type: "public",
-                    msg: fullMsg,
-                    sender: guestId
-                });
-                appendMsg('publicMsgs', fullMsg, 'you');
-            } else {
-                appendMsg('publicMsgs', 'Not connected to public room', 'system');
+            if (publicConnections.length === 0) {
+                appendMsg('publicMsgs', 'Not connected to any peers', 'system');
                 return;
             }
             
-            input.value = "";
+            try {
+                const messageData = {
+                    type: "public-message",
+                    message: fullMsg,
+                    sender: guestId,
+                    roomId: currentPublicRoom
+                };
+                
+                // Send to all connections (for host) or to host (for participants)
+                publicConnections.forEach(c => {
+                    if (c.open) c.send(messageData);
+                });
+                
+                appendMsg('publicMsgs', fullMsg, 'you');
+                input.value = "";
+            } catch (err) {
+                console.error('Send error:', err);
+                appendMsg('publicMsgs', 'Failed to send message', 'system');
+            }
         }
         
         // Helper functions
@@ -653,24 +969,28 @@
         
         function updatePrivateStatus() {
             const statusEl = document.getElementById('privateStatus');
+            const sendBtn = document.getElementById('privateSendBtn');
+            
             if (conn && conn.open) {
                 statusEl.className = 'status connected';
                 statusEl.textContent = 'Connected';
+                sendBtn.disabled = false;
             } else {
                 statusEl.className = 'status disconnected';
                 statusEl.textContent = 'Disconnected';
+                sendBtn.disabled = true;
             }
         }
         
-        function updatePublicStatus() {
-            const statusEl = document.getElementById('publicStatus');
+        function updatePublicRoomStatus() {
+            const statusEl = document.getElementById('roomStatus');
             if (isPublicHost) {
                 const count = publicConnections.length;
                 statusEl.className = 'status connected';
-                statusEl.textContent = `Hosting public room - ${count} ${count === 1 ? 'peer' : 'peers'} connected`;
-            } else if (publicConn && publicConn.open) {
+                statusEl.textContent = `Hosting - ${count} ${count === 1 ? 'user' : 'users'} connected`;
+            } else if (publicConnections.length > 0) {
                 statusEl.className = 'status connected';
-                statusEl.textContent = 'Connected to public room';
+                statusEl.textContent = 'Connected to room';
             } else {
                 statusEl.className = 'status disconnected';
                 statusEl.textContent = 'Disconnected';
@@ -691,4 +1011,4 @@
         }
     </script>
 </body>
-</html>
+    </html>
